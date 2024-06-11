@@ -23,22 +23,21 @@ PREMIUM_LOGS = int(getenv("PREMIUM_LOGS", "-1002065733031"))
 import os
 from os import getenv
 # ---------------R---------------------------------
-API_ID = int(os.environ.get("24250238"))
+API_ID = int(os.environ.get("API_ID"))
 # ------------------------------------------------
-API_HASH = os.environ.get("cb3f118ce5553dc140127647edcf3720")
+API_HASH = os.environ.get("API_HASH")
 # ----------------D--------------------------------
-BOT_TOKEN = os.environ.get("6103524529:AAGMbltmFHLulnBqSyi50CCZCLYeVrEFG8g")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 # -----------------A-------------------------------
-BOT_USERNAME = os.environ.get("test4k6_bot")
+BOT_USERNAME = os.environ.get("BOT_USERNAME")
 # ------------------X------------------------------
-OWNER_ID = int(os.environ.get("6175650047"))
+OWNER_ID = int(os.environ.get("OWNER_ID"))
 # ------------------X------------------------------
 
-SUDO_USERS = list(map(int, getenv("6175650047", "").split()))
+SUDO_USERS = list(map(int, getenv("SUDO_USERS", "").split()))
 # ------------------------------------------------
-CHANNEL_ID = int(os.environ.get("-1002065733031"))
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
 # ------------------------------------------------
-MONGO_URL = os.environ.get("mongodb+srv://daxxop:daxxop@daxxop.dg3umlc.mongodb.net/?retryWrites=true&w=majority")
+MONGO_URL = os.environ.get("MONGO_URL")
 # -----------------------------------------------
-PREMIUM_LOGS = int(os.environ.get("-1002065733031"))
-
+PREMIUM_LOGS = int(os.environ.get("PREMIUM_LOGS"))
