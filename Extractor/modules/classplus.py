@@ -34,9 +34,9 @@ def create_html_file(file_name, batch_name, contents):
 
  # ------------------------------------------------------------------------------------------------------------------------------- #
 
+    def get_course_content(session, course_id, folder_id=0):
 
-def get_course_content(session, course_id, folder_id=0):
-        fetched_contents = ""
+        fetched_contents = []
 
         params = {
             'courseId': course_id,
@@ -46,63 +46,25 @@ def get_course_content(session, course_id, folder_id=0):
         res = session.get(f'{api}/course/content/get', params=params)
 
         if res.status_code == 200:
-            res_json = res.json() 
+            res = res.json()
 
-            contents = res_json.get('data', {}).get('courseContent', [])
+            contents = res['data']['courseContent']
 
             for content in contents:
-                if content['contentType'] == 1:
-                    resources = content.get('resources', {})
 
-                    if resources.get('videos') or resources.get('files'):
+                if content['contentType'] == 1:
+                    resources = content['resources']
+
+                    if resources['videos'] or resources['files']:
                         sub_contents = get_course_content(session, course_id, content['id'])
                         fetched_contents += sub_contents
-                
-                elif content['contentType'] == 2:
-                    name = content.get('name', '')
-                    id = content.get('contentHashId', '')
-
-                    headers = {
-                        "Host": "api.classplusapp.com",
-                        "x-access-token": "eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJpZCI6OTIzNDIwMDUsIm9yZ0lkIjo1NDI0MjEsInR5cGUiOjEsIm1vYmlsZSI6IjkxODI5ODczMDAzNiIsIm5hbWUiOiJTdWRoYW5zaHUgSmhhIiwiZW1haWwiOiJzdWRoYW5zaHVqaGExNTFAZ21haWwuY29tIiwiaXNJbnRlcm5hdGlvbmFsIjowLCJkZWZhdWx0TGFuZ3VhZ2UiOiJFTiIsImNvdW50cnlDb2RlIjoiSU4iLCJjb3VudHJ5SVNPIjoiOTEiLCJ0aW1lem9uZSI6IkdNVCs1OjMwIiwiaXNEaXkiOnRydWUsIm9yZ0NvZGUiOiJ1Y3Z2YW8iLCJpc0RpeVN1YmFkbWluIjowLCJmaW5nZXJwcmludElkIjoiOGE5NTlhMGQ1Y2UyNjBkNzJhMDVhMzcxYTBhYzk5YmUiLCJpYXQiOjE3MDc0OTc2OTAsImV4cCI6MTcwODEwMjQ5MH0.68JhYbWAjf1B0a6hD4OGSmVhhH2WF97DX8DMJAfo5CkIwIVWABMugHN0Mz43LUoY",
-                        "User-Agent": "Mobile-Android",
-                        "Accept": "application/json, text/plain, */*",
-                        "Accept-Encoding": "gzip, deflate, br",
-                        "Accept-Language": "en",
-                        "Origin": "https://web.classplusapp.com",
-                        "Referer": "https://web.classplusapp.com/",
-                        "Region": "IN",
-                        "Sec-Ch-Ua": "\"Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121\"",
-                        "Sec-Ch-Ua-Mobile": "?0",
-                        "Sec-Ch-Ua-Platform": "\"Windows\"",
-                        "Sec-Fetch-Dest": "empty",
-                        "Sec-Fetch-Mode": "cors",
-                        "Sec-Fetch-Site": "same-site",
-                    }
-
-                    params = {
-                        'contentId': id
-                    }
-
-                    r = requests.get('https://api.classplusapp.com/cams/uploader/video/jw-signed-url', headers=headers, params=params)
-                    url = r.json()['url']
-
-                    content = f'{name}:{url}\n'
-                    fetched_contents += content
 
                 else:
-                    name = content.get('name', '')
-                    url = content.get('url', '')
-                    content = f'{name}:{url}\n'
-                    fetched_contents += content
+                    name = content['name']
+                    url = content['url']
+                    fetched_contents.append(f'{name}: {url}')
 
         return fetched_contents
-
-
-
-# ------------------------------------------------------------------------------------------------------------------------------- #
-
-async def classplus_txt(app, message):   
 
     headers = {
         'accept-encoding': 'gzip',
@@ -111,6 +73,152 @@ async def classplus_txt(app, message):
         'app-version'    : '1.4.73.2',
         'build-number'   : '35',
         'connection'     : 'Keep-Alive',
+        'content-type'   : 'application/json',
+        'device-details' : 'Xiaomi_Redmi 7_SDK-32',
+        'device-id'      : 'c28d3cb16bbdac01',
+        'host'           : 'api.classplusapp.com',
+        'region'         : 'IN',
+        'user-agent'     : 'Mobile-Android',
+        'webengage-luid' : '00000187-6fe4-5d41-a530-26186858be4c'
+    }
+
+    api = 'https://api.classplusapp.com/v2'
+
+    try:
+
+        reply = await message.chat.ask(
+            (
+                '**'
+                'Send your credentials as shown below.\n\n'
+                'Organisation Code\n'
+                'Phone Number\n\n'
+                'OR\n\n'
+                'Access Token'
+                '**'
+            ),
+            reply_to_message_id = message.id
+        )
+        creds = reply.text
+
+        session = requests.Session()
+        session.headers.update(headers)
+
+        logged_in = False
+
+        if '\n' in creds:
+            org_code, phone_no = [cred.strip() for cred in creds.split('\n')]
+
+            if org_code.isalpha() and phone_no.isdigit() and len(phone_no) == 10:
+                res = session.get(f'{api}/orgs/{org_code}')
+
+                if res.status_code == 200:
+                    res = res.json()
+
+                    org_id = int(res['data']['orgId'])
+
+                    data = {
+                        'countryExt': '91',
+                        'mobile'    : phone_no,
+                        'viaSms'    : 1,
+                        'orgId'     : org_id,
+                        'eventType' : 'login',
+                        'otpHash'   : 'j7ej6eW5VO'
+                    }
+        
+                    res = session.post(f'{api}/otp/generate', data=json.dumps(data))
+
+                    if res.status_code == 200:
+                        res = res.json()
+
+                        session_id = res['data']['sessionId']
+
+                        reply = await message.chat.ask(
+                            (
+                                '**'
+                                'Send OTP ?'
+                                '**'
+                            )
+                            ,reply_to_message_id = reply.id
+                        )
+
+                        if reply.text.isdigit():
+                            otp = reply.text.strip()
+
+                            data = {
+                                'otp'          : otp,
+                                'sessionId'    : session_id,
+                                'orgId'        : org_id,
+                                'fingerprintId': 'a3ee05fbde3958184f682839be4fd0f7',
+                                'countryExt'   : '91',
+                                'mobile'       : phone_no,
+                            }
+
+                            res = session.post(f'{api}/users/verify', data=json.dumps(data))
+
+                            if res.status_code == 200:
+                                res = res.json()
+
+                                user_id = res['data']['user']['id']
+                                token = res['data']['token']
+
+                                session.headers['x-access-token'] = token
+
+                                reply = await reply.reply(
+                                    (
+                                        '**'
+                                        'Your Access Token for future uses - \n\n'
+                                        '**'
+                                        '<pre>'
+                                        f'{token}'
+                                        '</pre>'
+                                    ),
+                                    quote=True
+                                )
+
+                                logged_in = True
+
+                            else:
+                                raise Exception('Failed to verify OTP.')
+                            
+                        else:
+                            raise Exception('Failed to validate OTP.')
+                        
+                    else:
+                        raise Exception('Failed to generate OTP.')
+                    
+                else:
+                    raise Exception('Failed to get organization Id.')
+                
+            else:
+                raise Exception('Failed to validate credentials.')
+
+        else:
+
+            token = creds.strip()
+            session.headers['x-access-token'] = token
+
+
+            res = session.get(f'{api}/users/details')
+
+            if res.status_code == 200:
+                res = res.json()
+
+                user_id = res['data']['responseData']['user']['id']
+                logged_in = True
+            
+            else:
+                raise Exception('Failed to get user details.')
+
+
+        if logged_in:
+
+            params = {
+                'userId': user_id,
+                'tabCategoryId': 3
+            }
+
+            res = session.get(f'{api}/profiles/users/data', params=params)
+
             if res.status_code == 200:
                 res = res.json()
 
@@ -184,3 +292,12 @@ async def classplus_txt(app, message):
    
     except Exception as e:
         print(f"Error: {e}")
+        await reply.reply(
+            (
+                '**'
+                f'Error : {error}'
+                '**'
+            ),
+            quote=True
+    )
+                
