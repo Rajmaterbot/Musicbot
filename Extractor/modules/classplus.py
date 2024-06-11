@@ -296,6 +296,6 @@ async def classplus_txt(message, session, user_id):
         )
 
     session = requests.Session()
-    await classplus_txt(message, session, user_id=None)
-
+loop = asyncio.get_event_loop()
+loop.run_until_complete(classplus_txt(message, session, user_id=None))
 idle()
