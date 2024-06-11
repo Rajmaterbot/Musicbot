@@ -111,119 +111,6 @@ async def classplus_txt(app, message):
         'app-version'    : '1.4.73.2',
         'build-number'   : '35',
         'connection'     : 'Keep-Alive',
-        'content-type'   : 'application/json',
-        'device-details' : 'Xiaomi_Redmi 7_SDK-32',
-        'device-id'      : 'c28d3cb16bbdac01',
-        'host'           : 'api.classplusapp.com',
-        'region'         : 'IN',
-        'user-agent'     : 'Mobile-Android',
-        'webengage-luid' : '00000187-6fe4-5d41-a530-26186858be4c'
-    }
-
-    headers2 = {
-        "Api-Version": "43",
-        "Content-Type": "application/json;charset=UTF-8",
-        "Device-Id": "1706954623055",
-        "Origin": "https://web.classplusapp.com",
-        "Referer": "https://web.classplusapp.com/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    }
-    
-    try:
-        input = await app.ask(message.chat.id, text="SEND YOUR CREDENTIALS AS SHOWN BELOW\n\nORGANISATION CODE:\n\nPHONE NUMBER:\n\nOR SEND\nACCESS TOKEN:")
-
-        creds = input.text
-        session = requests.Session()
-        session.headers.update(headers2)
-
-        logged_in = False
-
-        if '\n' in creds:
-            org_code, phone_no = [cred.strip() for cred in creds.split('\n')]
-
-            if org_code.isalpha() and phone_no.isdigit() and len(phone_no) == 10:
-                res = session.get(f'{api}/orgs/{org_code}')
-
-                if res.status_code == 200:
-                    res = res.json()
-
-                    org_id = int(res['data']['orgId'])
-
-                    data = {
-                        'countryExt': '91',
-                        'mobile'    : phone_no,
-                        'orgCode'   : org_code,
-                        'orgId'     : org_id,
-                        'viaSms'    : 1,
-                    }
-        
-                    res = session.post(f'{api}/otp/generate', data=json.dumps(data))
-
-                    if res.status_code == 200:
-                        res = res.json()
-
-                        session_id = res['data']['sessionId']
-
-                        user_otp = await app.ask(message.chat.id, text="Send your otp ")
-
-                        if user_otp.text.isdigit():
-                            otp = user_otp.text.strip()
-
-                            data = {
-                                "otp": otp,
-                                "countryExt": "91",
-                                "sessionId": session_id,
-                                "orgId": org_id,
-                                "fingerprintId": "",
-                                "mobile": phone_no
-                            }
-
-                            res = session.post(f'{api}/users/verify', data=json.dumps(data))
-                            res = res.json()
-                            if res['status'] == 'success':
-                                await app.send_message(message.chat.id, res)
-                                user_id = res['data']['user']['id']
-                                token = res['data']['token']
-                                session.headers['x-access-token'] = token
-
-                                await message.reply_text(f"Your access token for future uses -\n\n{token}")
-                                
-                                logged_in = True
-
-                            else:
-                                raise Exception('Failed to verify OTP.')  
-                        raise Exception('Failed to validate OTP.')
-                    raise Exception('Failed to generate OTP.')    
-                raise Exception('Failed to get organization Id.')
-            raise Exception('Failed to validate credentials.')
-
-        else:
-
-            token = creds.strip()
-            session.headers['x-access-token'] = token
-
-
-            res = session.get(f'{api}/users/details')
-
-            if res.status_code == 200:
-                res = res.json()
-
-                user_id = res['data']['responseData']['user']['id']
-                logged_in = True
-            
-            else:
-                raise Exception('Failed to get user details.')
-
-
-        if logged_in:
-
-            params = {
-                'userId': user_id,
-                'tabCategoryId': 3
-            }
-
-            res = session.get(f'{api}/profiles/users/data', params=params)
-
             if res.status_code == 200:
                 res = res.json()
 
@@ -236,22 +123,37 @@ async def classplus_txt(app, message):
                         name = course['name']
                         text += f'{cnt + 1}. {name}\n'
 
-                    num = await app.ask(message.chat.id, text=f"send index number of the course to download\n\n{text}")
-                        
-                    if num.text.isdigit() and len(num.text) <= len(courses):
+                    reply = await message.chat.ask(
+                        (
+                            '**'
+                            'Send index number of the course to download.\n\n'
+                            f'{text}'
+                            '**'
+                        ),
+                        reply_to_message_id = reply.id
+                    )
 
-                        selected_course_index = int(num.text.strip())
+                    if reply.text.isdigit() and len(reply.text) <= len(courses):
+
+                        selected_course_index = int(reply.text.strip())
 
                         course = courses[selected_course_index - 1]
 
                         selected_course_id = course['id']
                         selected_course_name = course['name']
 
-                        msg  = await message.reply_text("Now your extracting your course")
-                            
+                        loader = await reply.reply(
+                            (
+                                '**'
+                                'Extracting course...'
+                                '**'
+                            ),
+                            quote=True
+                        )
 
                         course_content = get_course_content(session, selected_course_id)
-                        await msg.delete()
+
+                        await loader.delete()
 
                         if course_content:
 
