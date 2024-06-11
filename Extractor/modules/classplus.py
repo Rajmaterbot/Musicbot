@@ -8,14 +8,16 @@ from config import SUDO_USERS
 
 api = 'https://api.classplusapp.com/v2'
 
+
 # ------------------------------------------------------------------------------------------------------------------------------- #
+
 
 def create_html_file(file_name, batch_name, contents):
     tbody = ''
     parts = contents.split('\n')
     for part in parts:
         split_part = [item.strip() for item in part.split(':', 1)]
-    
+
         text = split_part[0] if split_part[0] else 'Untitled'
         url = split_part[1].strip() if len(split_part) > 1 and split_part[1].strip() else 'No URL'
 
