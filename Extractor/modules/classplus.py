@@ -2,22 +2,20 @@ import requests
 import os
 import json
 import asyncio
-from pyrogram import filters, idle
+from pyrogram import Client, filters, idle
 from Extractor import app
 from config import SUDO_USERS
 
 api = 'https://api.classplusapp.com/v2'
 
-
 # ------------------------------------------------------------------------------------------------------------------------------- #
-
 
 def create_html_file(file_name, batch_name, contents):
     tbody = ''
     parts = contents.split('\n')
     for part in parts:
         split_part = [item.strip() for item in part.split(':', 1)]
-
+    
         text = split_part[0] if split_part[0] else 'Untitled'
         url = split_part[1].strip() if len(split_part) > 1 and split_part[1].strip() else 'No URL'
 
@@ -28,7 +26,6 @@ def create_html_file(file_name, batch_name, contents):
     title = batch_name.strip()
     with open(file_name, 'w') as fp:
         fp.write(file_content.replace('{{tbody_content}}', tbody).replace('{{batch_name}}', title))
-
 
 # ------------------------------------------------------------------------------------------------------------------------------- #
 
@@ -158,7 +155,7 @@ async def classplus_txt(message, session, user_id):
 
                                 session.headers['x-access-token'] = token
 
-                                reply = await reply.reply(
+                                await reply.reply(
                                     (
                                         '**'
                                         'Your Access Token for future uses - \n\n'
@@ -236,7 +233,7 @@ async def classplus_txt(message, session, user_id):
                         reply_to_message_id=reply.message_id
                     )
 
-                    if reply.text.isdigit() and len(reply.text) <= len(courses):
+                    if reply.text.isdigit() and int(reply.text) <= len(courses):
 
                         selected_course_index = int(reply.text.strip())
 
@@ -278,9 +275,12 @@ async def classplus_txt(message, session, user_id):
 
                         else:
                             raise Exception('Did not found any content in course.')
-                    raise Exception('Failed to validate course selection.')
-                raise Exception('Did not found any course.')
-            raise Exception('Failed to get courses.')
+                    else:
+                        raise Exception('Failed to validate course selection.')
+                else:
+                    raise Exception('Did not found any course.')
+            else:
+                raise Exception('Failed to get courses.')
             
 
    
@@ -295,7 +295,10 @@ async def classplus_txt(message, session, user_id):
             quote=True
         )
 
+@app.on_message(filters.command("extract") & filters.user(SUDO_USERS))
+async def extract_handler(client, message):
     session = requests.Session()
-loop = asyncio.get_event_loop()
-loop.run_until_complete(classplus_txt(message, session, user_id=None))
+    await classplus_txt(message, session, user_id=None)
+
+app.start()
 idle()
