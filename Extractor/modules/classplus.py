@@ -22,7 +22,6 @@ def create_html_file(file_name, batch_name, contents):
     with open(file_name, 'w') as fp:
         fp.write(file_content.replace('{{tbody_content}}', tbody).replace('{{batch_name}}', title))
 
-
 def get_course_content(session, course_id, folder_id=0):
     fetched_contents = ""
 
@@ -93,7 +92,6 @@ def get_course_content(session, course_id, folder_id=0):
                 fetched_contents += content
 
     return fetched_contents
-
 
 async def classplus_txt(app, message):
 
@@ -197,15 +195,15 @@ async def classplus_txt(app, message):
                                 logged_in = True
 
                             else:
-                                await message.reply_text('Failed to verify OTP.')
+                                await message.reply_text(f'Failed to verify OTP: {res}')
                         else:
-                            await message.reply_text('Failed to validate OTP.')
+                            await message.reply_text('Invalid OTP format.')
                     else:
-                        await message.reply_text('Failed to generate OTP.')
+                        await message.reply_text(f'Failed to generate OTP: {res.text}')
                 else:
-                    await message.reply_text('Failed to get organization Id.')
+                    await message.reply_text(f'Failed to get organization ID: {res.text}')
             else:
-                await message.reply_text('Failed to validate credentials.')
+                await message.reply_text('Invalid credentials format.')
 
         else:
             token = creds.strip()
@@ -224,7 +222,7 @@ async def classplus_txt(app, message):
                 logged_in = True
 
             else:
-                await message.reply_text('Failed to get user details.')
+                await message.reply_text(f'Failed to get user details: {res.text}')
 
         if logged_in:
             params = {
@@ -261,33 +259,39 @@ async def classplus_txt(app, message):
                         selected_course_id = course['id']
                         selected_course_name = course['name']
 
-                        msg = await message.reply_text("Now your extracting your data.....")
+                        msg = await message.reply_text("Now extracting your course")
 
-                        contents = get_course_content(session, selected_course_id)
-
-                        save_path = f'{selected_course_name}.txt'
-                        with open(save_path, 'w') as f:
-                            f.write(contents)
-
-                        create_html_file(f'{selected_course_name}.html', selected_course_name, contents)
-
-                        await message.reply_document(save_path)
-
-                        os.remove(save_path)
-
+                        course_content = get_course_content(session, selected_course_id)
                         await msg.delete()
-                        await message.reply_text('Your Data Extracted Successfully....')
+
+                        if course_content:
+
+                            caption = (f"App Name : Classplus\nBatch Name : {selected_course_name}")
+
+                            text_file = f"{selected_course_name}.txt"
+                            with open(text_file, 'w') as f:
+                                f.write(f"{course_content}")
+
+                            await app.send_document(message.chat.id, document=text_file, caption=caption)
+
+                            html_file = f'{selected_course_name}.html'
+                            create_html_file(html_file, selected_course_name, course_content)
+
+                            await app.send_document(message.chat.id, html_file, caption=caption)
+                            os.remove(text_file)
+                            os.remove(html_file)
+
+                        else:
+                            await message.reply_text('No content found in the course.')
                     else:
                         await message.reply_text('Invalid input. Please send a valid course index number.')
                 else:
                     await message.reply_text('No courses found for this user.')
-
             else:
-                await message.reply_text('Failed to get user profile data.')
+                await message.reply_text(f'Failed to get user profile data: {res.text}')
 
     except Exception as e:
         await message.reply_text(f'An error occurred: {str(e)}')
 
 # Assuming this function is registered in your bot with Pyrogram
 # app.add_handler(filters.command("classplus_txt"), classplus_txt)
-
