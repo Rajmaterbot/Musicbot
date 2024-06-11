@@ -293,8 +293,6 @@ async def classplus_txt(message, session, user_id):
             quote=True
         )
 
-@app.on_message(filters.user(SUDO_USERS) & filters.command("start"))
-async def start(client, message):
     session = requests.Session()
     await classplus_txt(message, session, user_id=None)
 
