@@ -1,14 +1,10 @@
-import requests, os, sys, re
-import json, asyncio
-import subprocess
-import datetime
+import requests
+import os
+import json
+import asyncio
+from pyrogram import filters, idle
 from Extractor import app
 from config import SUDO_USERS
-from pyrogram import filters, idle
-from subprocess import getstatusoutput
-
-
-
 
 api = 'https://api.classplusapp.com/v2'
 
@@ -32,60 +28,60 @@ def create_html_file(file_name, batch_name, contents):
         fp.write(file_content.replace('{{tbody_content}}', tbody).replace('{{batch_name}}', title))
 
 
- # ------------------------------------------------------------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------------------------------------- #
 
-    def get_course_content(session, course_id, folder_id=0):
+async def get_course_content(session, course_id, folder_id=0):
 
-        fetched_contents = []
+    fetched_contents = []
 
-        params = {
-            'courseId': course_id,
-            'folderId': folder_id,
-        }
+    params = {
+        'courseId': course_id,
+        'folderId': folder_id,
+    }
 
-        res = session.get(f'{api}/course/content/get', params=params)
+    res = session.get(f'{api}/course/content/get', params=params)
 
-        if res.status_code == 200:
-            res = res.json()
+    if res.status_code == 200:
+        res = res.json()
 
-            contents = res['data']['courseContent']
+        contents = res['data']['courseContent']
 
-            for content in contents:
+        for content in contents:
 
-                if content['contentType'] == 1:
-                    resources = content['resources']
+            if content['contentType'] == 1:
+                resources = content['resources']
 
-                    if resources['videos'] or resources['files']:
-                        sub_contents = get_course_content(session, course_id, content['id'])
-                        fetched_contents += sub_contents
+                if resources['videos'] or resources['files']:
+                    sub_contents = await get_course_content(session, course_id, content['id'])
+                    fetched_contents += sub_contents
 
-                else:
-                    name = content['name']
-                    url = content['url']
-                    fetched_contents.append(f'{name}: {url}')
+            else:
+                name = content['name']
+                url = content['url']
+                fetched_contents.append(f'{name}: {url}')
 
-        return fetched_contents
+    return fetched_contents
 
+# Rest of the code...
+
+async def main(message):
     headers = {
         'accept-encoding': 'gzip',
         'accept-language': 'EN',
-        'api-version'    : '35',
-        'app-version'    : '1.4.73.2',
-        'build-number'   : '35',
-        'connection'     : 'Keep-Alive',
-        'content-type'   : 'application/json',
-        'device-details' : 'Xiaomi_Redmi 7_SDK-32',
-        'device-id'      : 'c28d3cb16bbdac01',
-        'host'           : 'api.classplusapp.com',
-        'region'         : 'IN',
-        'user-agent'     : 'Mobile-Android',
-        'webengage-luid' : '00000187-6fe4-5d41-a530-26186858be4c'
+        'api-version': '35',
+        'app-version': '1.4.73.2',
+        'build-number': '35',
+        'connection': 'Keep-Alive',
+        'content-type': 'application/json',
+        'device-details': 'Xiaomi_Redmi 7_SDK-32',
+        'device-id': 'c28d3cb16bbdac01',
+        'host': 'api.classplusapp.com',
+        'region': 'IN',
+        'user-agent': 'Mobile-Android',
+        'webengage-luid': '00000187-6fe4-5d41-a530-26186858be4c'
     }
 
-    api = 'https://api.classplusapp.com/v2'
-
     try:
-
         reply = await message.chat.ask(
             (
                 '**'
@@ -96,7 +92,7 @@ def create_html_file(file_name, batch_name, contents):
                 'Access Token'
                 '**'
             ),
-            reply_to_message_id = message.id
+            reply_to_message_id=message.message_id
         )
         creds = reply.text
 
@@ -118,11 +114,11 @@ def create_html_file(file_name, batch_name, contents):
 
                     data = {
                         'countryExt': '91',
-                        'mobile'    : phone_no,
-                        'viaSms'    : 1,
-                        'orgId'     : org_id,
-                        'eventType' : 'login',
-                        'otpHash'   : 'j7ej6eW5VO'
+                        'mobile': phone_no,
+                        'viaSms': 1,
+                        'orgId': org_id,
+                        'eventType': 'login',
+                        'otpHash': 'j7ej6eW5VO'
                     }
         
                     res = session.post(f'{api}/otp/generate', data=json.dumps(data))
@@ -137,20 +133,20 @@ def create_html_file(file_name, batch_name, contents):
                                 '**'
                                 'Send OTP ?'
                                 '**'
-                            )
-                            ,reply_to_message_id = reply.id
+                            ),
+                            reply_to_message_id=reply.message_id
                         )
 
                         if reply.text.isdigit():
                             otp = reply.text.strip()
 
                             data = {
-                                'otp'          : otp,
-                                'sessionId'    : session_id,
-                                'orgId'        : org_id,
+                                'otp': otp,
+                                'sessionId': session_id,
+                                'orgId': org_id,
                                 'fingerprintId': 'a3ee05fbde3958184f682839be4fd0f7',
-                                'countryExt'   : '91',
-                                'mobile'       : phone_no,
+                                'countryExt': '91',
+                                'mobile': phone_no,
                             }
 
                             res = session.post(f'{api}/users/verify', data=json.dumps(data))
@@ -238,7 +234,7 @@ def create_html_file(file_name, batch_name, contents):
                             f'{text}'
                             '**'
                         ),
-                        reply_to_message_id = reply.id
+                        reply_to_message_id=reply.message_id
                     )
 
                     if reply.text.isdigit() and len(reply.text) <= len(courses):
@@ -259,7 +255,7 @@ def create_html_file(file_name, batch_name, contents):
                             quote=True
                         )
 
-                        course_content = get_course_content(session, selected_course_id)
+                        course_content = await get_course_content(session, selected_course_id)
 
                         await loader.delete()
 
@@ -267,15 +263,14 @@ def create_html_file(file_name, batch_name, contents):
 
                             caption = (f"App Name : Classplus\nBatch Name : {selected_course_name}")
 
-                            
                             text_file = "Classplus"
                             with open(f'{text_file}.txt', 'w') as f:
-                                f.write(f"{course_content}")
+                                f.write('\n'.join(course_content))
 
                             await app.send_document(message.chat.id, document=f"{text_file}.txt", caption=caption)
 
                             html_file = f'{text_file}.html'
-                            create_html_file(html_file, selected_course_name, course_content)
+                            create_html_file(html_file, selected_course_name, '\n'.join(course_content))
 
                             await app.send_document(message.chat.id, html_file, caption=caption)
                             os.remove(f'{text_file}.txt')
@@ -292,12 +287,18 @@ def create_html_file(file_name, batch_name, contents):
    
     except Exception as e:
         print(f"Error: {e}")
-        await reply.reply(
+        await message.reply(
             (
                 '**'
-                f'Error : {error}'
+                f'Error : {e}'
                 '**'
             ),
             quote=True
-    )
-                
+        )
+
+@app.on_message(filters.user(SUDO_USERS) & filters.command("start"))
+async def start(client, message):
+    await main(message)
+
+idle()
+
