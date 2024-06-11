@@ -62,9 +62,7 @@ async def get_course_content(session, course_id, folder_id=0):
 
     return fetched_contents
 
-# Rest of the code...
-
-async def main(message):
+async def classplus_txt(message, session, user_id):
     headers = {
         'accept-encoding': 'gzip',
         'accept-language': 'EN',
@@ -96,7 +94,6 @@ async def main(message):
         )
         creds = reply.text
 
-        session = requests.Session()
         session.headers.update(headers)
 
         logged_in = False
@@ -298,7 +295,7 @@ async def main(message):
 
 @app.on_message(filters.user(SUDO_USERS) & filters.command("start"))
 async def start(client, message):
-    await main(message)
+    session = requests.Session()
+    await classplus_txt(message, session, user_id=None)
 
 idle()
-
